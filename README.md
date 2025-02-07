@@ -1,6 +1,9 @@
 # PDF Embed Search 🔍📄
 
-A lightweight application that extracts, indexes, and searches PDF content using embeddings and Qdrant, all within a Streamlit-powered chat interface.
+<div style="display: flex; align-items: center;">
+  <img src="assets/workflow.webp" alt="Workflow Diagram" width="200" style="margin-right: 20px;">
+  <p>A lightweight application that extracts, indexes, and searches PDF content using embeddings and Qdrant, all within a Streamlit-powered chat interface.</p>
+</div>
 
 ## Features 🚀
 - **PDF Parsing**: Extracts and processes text from multi-page PDFs.
