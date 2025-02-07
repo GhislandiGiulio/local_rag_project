@@ -3,7 +3,9 @@ from pdf_scraping import scrape_pdf
 from embedder_db import EmbedderDB
 
 if "embedder" not in st.session_state:
-    st.session_state.embedder = EmbedderDB() # WORK ON COLLECTION NAMES
+    
+    with st.spinner("Loading Embedding Model..."):
+        st.session_state.embedder = EmbedderDB() # WORK ON COLLECTION NAMES
 
 # Initialize chat history in session state
 if "messages" not in st.session_state:
