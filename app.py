@@ -1,5 +1,9 @@
 import streamlit as st
 from pdf_scraping import scrape_pdf
+from embedder_db import EmbedderDB
+
+if "embedder" not in st.session_state:
+    st.session_state.embedder = EmbedderDB() # WORK ON COLLECTION NAMES
 
 # Initialize chat history in session state
 if "messages" not in st.session_state:
@@ -25,11 +29,17 @@ else:
 analyze_placeholder = st.empty()
 
 if st.session_state.file_uploaded and not st.session_state.file_scraped:
+    
     with analyze_placeholder:  # Use placeholder for the button
         if st.button("Analyze"):
             st.session_state.file_scraped = True
+            
             with st.spinner("Processing..."):
-                scrape_pdf(file)
+                paragraphs, num_pages = scrape_pdf(file)
+                
+            with st.spinner("Embedding and uploading to DB..."):
+                st.session_state.embedder.embed_and_load(paragraphs=paragraphs, num_pages=num_pages, collection_name=file.name)
+                
             analyze_placeholder.empty()  # Clear the button after processing
 
 # Show chat input only when a file is uploaded and analyzed
@@ -43,7 +53,8 @@ if st.session_state.file_scraped:
                 st.markdown(message["content"])
 
         # Placeholder AI response (replace with your logic)
-        response = f"You can find out more about your question at page:"
+        query_result = st.session_state.embedder.search(user_input)
+        response = f"You can find out more about your question at page: {query_result}"
 
         # Append AI response to chat history
         st.session_state.messages.append({"role": "assistant", "content": response})
