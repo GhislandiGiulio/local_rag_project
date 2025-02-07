@@ -6,7 +6,7 @@ from qdrant_client.models import PointStruct
 
 class EmbedderDB:
     
-    def __init__(self, collection_name="pdf_embeddings"):
+    def __init__(self):
         
         try:
             self.client = QdrantClient(url="http://localhost:6333")
@@ -16,11 +16,11 @@ class EmbedderDB:
             print("There's an error with Qdrant DB. Check if it's running and it's on the right port.")
             exit(0)
             
-    def embed_and_load(self, paragraphs: list, num_pages: int, collection_name="pdf_embeddings"): 
+    def embed_and_load(self, paragraphs_with_pages: list, num_pages: int, collection_name="pdf_embeddings"): 
         
         self.create_collection(collection_name) # this will create a new collection if it doesn't exist. if it exists it throws an error
                
-        embeddings = self.embedding_model.encode(paragraphs)
+        embeddings = self.embedding_model.encode([paragraph for paragraph, _ in paragraphs_with_pages])
         
         points = [
             PointStruct(
@@ -31,7 +31,7 @@ class EmbedderDB:
                     "page": num_pag
                 },
             )
-            for idx, (data, text, num_pag) in enumerate(zip(embeddings, paragraphs, range(1, num_pages+1)))
+            for idx, (data, (text, num_pag)) in enumerate(zip(embeddings, paragraphs_with_pages))
             
         ]
         
@@ -61,12 +61,17 @@ class EmbedderDB:
             self.client.upsert(collection_name, batch)
             
 
-    def search(self, prompt: str, collection_name="pdf_embeddings"):
+    def search(self, prompt: str, collection_name="pdf_embeddings") -> list[int]:
         
         result = self.client.query_points(
             collection_name=collection_name,
             query=self.embedding_model.encode(prompt),
-            limit=10
+            limit=3
         )
         
-        return result
+        pages = []
+        
+        for point in result.points:
+            pages.append(point.payload["page"])
+        
+        return pages
