@@ -2,29 +2,36 @@ import PyPDF2
 
 # Open the PDF file in read-binary mode
 def scrape_pdf(file) -> list[str]:
+    import PyPDF2
+
+    # Define the minimum word count for a paragraph to be considered valid
+    MIN_WORD_COUNT = 8  
+
     pdf_reader = PyPDF2.PdfReader(file)
         
-    # Get the number of pages in the PDF
+    # Get the number of pages
     num_pages = len(pdf_reader.pages)
     
-    # Initialize a string to hold the extracted text
-    extracted_text = ''
-    
+    # List to store extracted paragraphs with page numbers
+    paragraphs_with_pages = []
+
     # Loop through each page and extract text
     for page_num in range(num_pages):
         page = pdf_reader.pages[page_num]
-        extracted_text += page.extract_text()
+        text = page.extract_text()
         
-    # Split the text into paragraphs based on newlines or custom delimiters
-    paragraphs = extracted_text.split('\n')
-
-    # Clean up empty lines or unwanted characters
-    paragraphs = [p.strip() for p in paragraphs if p.strip()]
-
-    # Define a minimum word count for a paragraph to be considered valid
-    min_word_count = 8  # Adjust as needed
-
-    # Filter out small paragraphs
-    paragraphs = [p for p in paragraphs if len(p.split()) >= min_word_count]
-    
-    return paragraphs, num_pages
+        if text:  # Ensure the page contains text
+            # Split text into paragraphs based on newlines
+            paragraphs = text.split("\n")
+            
+            # Clean up empty lines and unwanted characters
+            paragraphs = [p.strip() for p in paragraphs if p.strip()]
+            
+            # Filter out short paragraphs
+            valid_paragraphs = [p for p in paragraphs if len(p.split()) >= MIN_WORD_COUNT]
+            
+            # Store paragraphs with the associated page number
+            for paragraph in valid_paragraphs:
+                paragraphs_with_pages.append((paragraph, page_num + 1))
+                
+    return paragraphs_with_pages, num_pages
