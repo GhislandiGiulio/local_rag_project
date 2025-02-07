@@ -26,3 +26,5 @@ def scrape_pdf(file) -> list[str]:
 
     # Filter out small paragraphs
     paragraphs = [p for p in paragraphs if len(p.split()) >= min_word_count]
+    
+    return paragraphs, num_pages
