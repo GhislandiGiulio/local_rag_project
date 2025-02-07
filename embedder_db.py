@@ -1,0 +1,72 @@
+from qdrant_client import QdrantClient
+from sentence_transformers import SentenceTransformer
+from qdrant_client.models import VectorParams, Distance
+from qdrant_client.models import PointStruct
+
+
+class EmbedderDB:
+    
+    def __init__(self, collection_name="pdf_embeddings"):
+        
+        try:
+            self.client = QdrantClient(url="http://localhost:6333")
+            self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+            
+        except:
+            print("There's an error with Qdrant DB. Check if it's running and it's on the right port.")
+            exit(0)
+            
+    def embed_and_load(self, paragraphs: list, num_pages: int, collection_name="pdf_embeddings"): 
+        
+        self.create_collection(collection_name) # this will create a new collection if it doesn't exist. if it exists it throws an error
+               
+        embeddings = self.embedding_model.encode(paragraphs)
+        
+        points = [
+            PointStruct(
+                id=idx,
+                vector=data,
+                payload={
+                    "text": text,
+                    "page": num_pag
+                },
+            )
+            for idx, (data, text, num_pag) in enumerate(zip(embeddings, paragraphs, range(1, num_pages+1)))
+            
+        ]
+        
+        self.upload(points, collection_name)
+        
+    def create_collection(self, collection_name="pdf_embeddings"):
+        # checking for existence of a collection
+            collections = self.client.get_collections().collections
+            
+            if collection_name not in collections:
+                self.client.create_collection(
+                    collection_name,
+                    vectors_config=VectorParams(
+                        size=384, # default vector size of SentenceTransformer all-MiniLM-L6-v2 model
+                        distance=Distance.COSINE,
+                    ),
+                )
+            else:
+                raise Exception("Collection already exists")
+        
+    def upload(self, points: list, collection_name="pdf_embeddings"):
+        batch_size = 1000
+        
+        # uploading to DB in batches of size batch_size
+        for i in range(0, len(points), batch_size):
+            batch = points[i:i + batch_size]
+            self.client.upsert(collection_name, batch)
+            
+
+    def search(self, prompt: str, collection_name="pdf_embeddings"):
+        
+        result = self.client.query_points(
+            collection_name=collection_name,
+            query=self.embedding_model.encode(prompt),
+            limit=10
+        )
+        
+        return result
