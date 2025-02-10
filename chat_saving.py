@@ -7,14 +7,19 @@ chat_history = db.table("chat_history")
 Message = Query()  # TinyDB query object
 
 # Insert a message
-def save_message(pdf_file, role, message):
+def save_message(pdf_hash, pdf_name, role, message):
     chat_history.insert({
-        "pdf_file": pdf_file,
+        "pdf_hash": pdf_hash,
+        "pdf_name": pdf_name,
         "role": role,
         "content": message,
         "timestamp": datetime.now().isoformat()
     })
     
 # Retrieve messages filtered by pdf_file
-def get_messages(pdf_file):
-    return chat_history.search(Message.pdf_file == pdf_file)
+def get_messages(pdf_hash):
+    return chat_history.search(Message.pdf_hash == pdf_hash)
+
+
+def get_chats():
+    return list({(chat["pdf_name"], chat["pdf_hash"]) for chat in chat_history.all()})
