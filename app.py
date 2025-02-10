@@ -37,12 +37,14 @@ if st.session_state.file_uploaded and not st.session_state.file_scraped:
             st.session_state.file_scraped = True
             
             with st.spinner("Processing..."):
-                paragraphs_with_pages, num_pages = scrape_pdf(file)
+                paragraphs_with_pages, num_pages, sha256_code = scrape_pdf(file)
                 
             with st.spinner("Embedding and uploading to DB..."):
-                st.session_state.embedder.embed_and_load(paragraphs_with_pages=paragraphs_with_pages, num_pages=num_pages, collection_name=file.name)
-                
+                success = st.session_state.embedder.embed_and_load(paragraphs_with_pages=paragraphs_with_pages, num_pages=num_pages, collection_name=sha256_code)
+
             analyze_placeholder.empty()  # Clear the button after processing
+            if success: st.success("Analysis complete!")
+            else: st.error("The PDF file has already been uploaded.")
 
 # Show chat input only when a file is uploaded and analyzed
 if st.session_state.file_scraped:

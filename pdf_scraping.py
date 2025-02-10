@@ -1,7 +1,20 @@
 import PyPDF2
 
-# Open the PDF file in read-binary mode
-def scrape_pdf(file) -> list[str]:
+
+
+import hashlib
+
+def __calculate_sha256(file):
+    
+    sha256_hash = hashlib.sha256()
+    # read the file in chunks to avoid memory issues with large files
+    for chunk in iter(lambda: file.read(4096), b""):
+        sha256_hash.update(chunk)
+        
+    return sha256_hash.hexdigest()
+
+
+def scrape_pdf(file) -> tuple[list, int, str]:
     import PyPDF2
 
     # Define the minimum word count for a paragraph to be considered valid
@@ -34,4 +47,4 @@ def scrape_pdf(file) -> list[str]:
             for paragraph in valid_paragraphs:
                 paragraphs_with_pages.append((paragraph, page_num + 1))
                 
-    return paragraphs_with_pages, num_pages
+    return paragraphs_with_pages, num_pages, __calculate_sha256(file)

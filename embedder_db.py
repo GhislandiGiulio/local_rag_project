@@ -18,7 +18,9 @@ class EmbedderDB:
             
     def embed_and_load(self, paragraphs_with_pages: list, num_pages: int, collection_name="pdf_embeddings"): 
         
-        self.create_collection(collection_name) # this will create a new collection if it doesn't exist. if it exists it throws an error
+        # this will create a new collection if it doesn't exist. if it exists it return error.
+        if not self.create_collection(collection_name): 
+            return False
                
         embeddings = self.embedding_model.encode([paragraph for paragraph, _ in paragraphs_with_pages])
         
@@ -37,11 +39,13 @@ class EmbedderDB:
         
         self.upload(points, collection_name)
         
+        return True
+        
     def create_collection(self, collection_name="pdf_embeddings"):
         # checking for existence of a collection
             collections = self.client.get_collections().collections
             
-            if collection_name not in collections:
+            try:
                 self.client.create_collection(
                     collection_name,
                     vectors_config=VectorParams(
@@ -49,8 +53,11 @@ class EmbedderDB:
                         distance=Distance.COSINE,
                     ),
                 )
-            else:
-                raise Exception("Collection already exists")
+                return True
+            # in case collection name already exists (same file has already been embedded)
+            except Exception:
+                return False
+                
         
     def upload(self, points: list, collection_name="pdf_embeddings"):
         batch_size = 1000
