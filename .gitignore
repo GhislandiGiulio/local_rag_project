@@ -1,5 +1,5 @@
 # custom
-db/chatbot.db
+db/chatbot.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
