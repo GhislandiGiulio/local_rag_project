@@ -2,3 +2,4 @@ streamlit
 tinydb
 qdrant-client
 sentence-transformers
+pypdf2
