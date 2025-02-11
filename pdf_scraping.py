@@ -1,7 +1,5 @@
 import PyPDF2
-
-
-
+import re
 import hashlib
 
 def __calculate_sha256(file):
@@ -48,3 +46,62 @@ def scrape_pdf(file) -> tuple[list, int, str]:
                 paragraphs_with_pages.append((paragraph, page_num + 1))
                 
     return paragraphs_with_pages, num_pages, __calculate_sha256(file)
+
+
+def new_scrape_pdf(file) -> tuple[list, int, str]:
+    """
+    Extracts text from a PDF file and stores it in a list of tuples,
+    where each tuple contains the text and its corresponding page number.
+    The function also returns the total number of pages and a SHA-256 hash
+    of the PDF file.
+
+    :param file: A file object containing the PDF file
+    :return: A tuple containing the list of (paragraph, page_num), the total number of pages, and the SHA-256 hash
+    """
+    
+    MIN_WORD_COUNT = 8  # Minimum words for a valid paragraph
+    reader = PyPDF2.PdfReader(file)
+    num_pages = len(reader.pages)  # Get total pages
+    
+    paragraphs_with_pages = []  # List of (paragraph, page_num)
+    
+    # Loop through pages to extract text
+    for page_num, page in enumerate(reader.pages, start=1):
+        text = page.extract_text()
+        if not text:
+            continue  # Skip empty pages
+
+        text = re.sub(r'\s+', ' ', text).strip()  # Normalize spaces
+
+        # Split at full stops only if the sentence has more than 5 words
+        def custom_split(text):
+            sentences = re.split(r'(?<=\.) ', text)  # Split at full stop + space
+            paragraphs = []
+            buffer = []
+
+            for sentence in sentences:
+                words = sentence.split()
+                buffer.append(sentence)
+
+                if len(words) > 5:  # Only break if sentence has >5 words
+                    paragraphs.append(" ".join(buffer))
+                    buffer = []
+
+            if buffer:  # Add remaining sentences
+                paragraphs.append(" ".join(buffer))
+
+            return paragraphs
+
+        paragraphs = custom_split(text)
+
+        # Filter out short paragraphs
+        valid_paragraphs = [p.strip() for p in paragraphs if len(p.split()) >= MIN_WORD_COUNT]
+
+        # Store paragraphs with their respective page numbers
+        for paragraph in valid_paragraphs:
+            paragraphs_with_pages.append((paragraph, page_num))
+
+    # Compute SHA-256 hash
+    pdf_hash = __calculate_sha256(file)
+
+    return paragraphs_with_pages, num_pages, pdf_hash
