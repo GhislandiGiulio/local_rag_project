@@ -1,5 +1,5 @@
 import streamlit as st
-from pdf_scraping import scrape_pdf
+from pdf_scraping import new_scrape_pdf
 from embedder_db import EmbedderDB
 import chat_saving
 
@@ -9,7 +9,7 @@ def upload_sequence():
     st.session_state.pdf_name = st.session_state.file.name
     
     with st.spinner("Processing..."):
-        paragraphs_with_pages, num_pages, st.session_state.sha256_code = scrape_pdf(st.session_state.file)
+        paragraphs_with_pages, num_pages, st.session_state.sha256_code = new_scrape_pdf(st.session_state.file)
 
     with st.spinner("Embedding and uploading to DB..."):
         success = st.session_state.embedder.embed_and_load(
@@ -28,13 +28,13 @@ def upload_sequence():
 
 def load_sidebar():
     st.sidebar.title("Embedded PDFs")
-    st.sidebar.write("Select one to retrieve chat history")
-    st.sidebar.write("or start a new conversation.")
+    st.sidebar.write("**Select one** to retrieve chat history...")
+    st.sidebar.write("or start a **new conversation**.")
     
     # Always refresh chat history before displaying buttons
     st.session_state.chat_history = chat_saving.get_chats()
 
-    if st.sidebar.button("NEW CHAT", use_container_width=True, key="new_chat"):
+    if st.sidebar.button("**New Chat**", use_container_width=True, key="new_chat"):
         st.session_state.state = "upload"
         st.session_state.file = None
         st.rerun()
@@ -82,6 +82,8 @@ if st.session_state.state == "upload":
     load_sidebar()
 
 if st.session_state.state == "chat":
+    
+    st.write(f"Chatting with **{st.session_state.pdf_name}**")
     
     load_sidebar()
     
