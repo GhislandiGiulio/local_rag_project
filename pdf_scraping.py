@@ -16,7 +16,7 @@ def scrape_pdf(file) -> tuple[list, int, str]:
     import PyPDF2
 
     # Define the minimum word count for a paragraph to be considered valid
-    MIN_WORD_COUNT = 8  
+    MIN_WORD_COUNT = 8
 
     pdf_reader = PyPDF2.PdfReader(file)
         
@@ -58,8 +58,9 @@ def new_scrape_pdf(file) -> tuple[list, int, str]:
     :param file: A file object containing the PDF file
     :return: A tuple containing the list of (paragraph, page_num), the total number of pages, and the SHA-256 hash
     """
-    
-    MIN_WORD_COUNT = 8  # Minimum words for a valid paragraph
+
+    MIN_WORD_COUNT = 5  # Minimum words for a valid paragraph
+    MAX_WORD_COUNT = 15  # Maximum words before splitting
     reader = PyPDF2.PdfReader(file)
     num_pages = len(reader.pages)  # Get total pages
     
@@ -73,17 +74,18 @@ def new_scrape_pdf(file) -> tuple[list, int, str]:
 
         text = re.sub(r'\s+', ' ', text).strip()  # Normalize spaces
 
-        # Split at full stops only if the sentence has more than 5 words
+        # Split text into chunks based on full stops and newlines
         def custom_split(text):
-            sentences = re.split(r'(?<=\.) ', text)  # Split at full stop + space
+            raw_sentences = re.split(r'(?<=\.) |[\n]', text)  # Split at full stops or newlines
             paragraphs = []
             buffer = []
 
-            for sentence in sentences:
+            for sentence in raw_sentences:
                 words = sentence.split()
                 buffer.append(sentence)
 
-                if len(words) > 5:  # Only break if sentence has >5 words
+                # If sentence has more than 5 words, consider breaking here
+                if len(words) > 5 or sum(len(s.split()) for s in buffer) > MAX_WORD_COUNT:
                     paragraphs.append(" ".join(buffer))
                     buffer = []
 
@@ -94,8 +96,11 @@ def new_scrape_pdf(file) -> tuple[list, int, str]:
 
         paragraphs = custom_split(text)
 
-        # Filter out short paragraphs
-        valid_paragraphs = [p.strip() for p in paragraphs if len(p.split()) >= MIN_WORD_COUNT]
+        # Filter out very short paragraphs and ensure max word count is respected
+        valid_paragraphs = [
+            p.strip() for p in paragraphs
+            if MIN_WORD_COUNT <= len(p.split()) <= MAX_WORD_COUNT
+        ]
 
         # Store paragraphs with their respective page numbers
         for paragraph in valid_paragraphs:
