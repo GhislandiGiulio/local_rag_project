@@ -11,6 +11,8 @@
 - **Qdrant Indexing**: Stores and retrieves document chunks with high-speed vector search.
 - **Chat Interface**: A user-friendly Streamlit UI for natural language queries.
 
+<img src="assets/interface.png" alt="Interface Screenshot" width="500" style="margin-right: 20px;">
+
 ## Tech Stack 🛠
 - **Python 3.13**
 - **Qdrant** for fast vector search
