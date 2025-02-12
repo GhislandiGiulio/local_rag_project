@@ -3,3 +3,5 @@ tinydb
 qdrant-client
 sentence-transformers
 pypdf2
+openai
+python-dotenv
