@@ -68,7 +68,7 @@ class EmbedderDB:
             self.client.upsert(collection_name, batch)
             
 
-    def search(self, prompt: str, collection_name="pdf_embeddings") -> list[int]:
+    def search(self, prompt: str, collection_name="pdf_embeddings") -> list[tuple]:
         
         result = self.client.query_points(
             collection_name=collection_name,
@@ -79,6 +79,6 @@ class EmbedderDB:
         pages = []
         
         for point in result.points:
-            pages.append(point.payload["page"])
+            pages.append((point.payload["page"], point.score))
         
         return pages

@@ -98,7 +98,7 @@ if st.session_state.state == "chat":
             st.markdown(user_input)
         
         query_result = st.session_state.embedder.search(user_input, collection_name=st.session_state.sha256_code)
-        response = f"You can find out more about your question at pages: \n{''.join(['- ' + str(page) + '\n' for page in query_result])}"
+        response = f"You can find out more about your question at pages: \n{''.join(['- ' + str(page) + '\n' + "Score: " + str(score) + "\n" for page, score in query_result])}"
         
         st.session_state.messages.append({"role": "assistant", "content": response})
         chat_saving.save_message(st.session_state.sha256_code, st.session_state.pdf_name, "user", user_input)
