@@ -4,79 +4,70 @@ from embedder_db import EmbedderDB
 import chat_saving
 import dotenv
 
+# Load environment variables
 @st.cache_data
 def load_env():
     dotenv.load_dotenv()
     return True
 
-# Loading API keys
 load_env()
 
-# Available embedding models
+# main logo of app
+st.logo("assets/icon.svg")
+
+# Embedding models
 EMBEDDING_MODELS = {
     "SentenceTransformers - all-MiniLM-L6-v2": "all-MiniLM-L6-v2",
     "OpenAI - text-embedding-3-small": "text-embedding-3-small"
 }
 
 def upload_sequence():
-    # Display uploaded file name
-    st.caption(st.session_state.file.name)
-    
-    # Store PDF name in session state
+    st.caption(f":page_facing_up: **{st.session_state.file.name}**")
     st.session_state.pdf_name = st.session_state.file.name
     
-    with st.spinner("Processing..."):
-        # Extract paragraphs and compute SHA256 hash of the document
+    with st.spinner("Processing your PDF..."):
         paragraphs_with_pages, num_pages, st.session_state.sha256_code = new_scrape_pdf(st.session_state.file)
 
-    with st.spinner(f"Embedding using {st.session_state.selected_model} and uploading to DB..."):
-        # Initialize the embedder with the selected model
+    with st.spinner(f"Embedding using {st.session_state.selected_model}..."):
         st.session_state.embedder = EmbedderDB(embedding_model=st.session_state.selected_model)
         success = st.session_state.embedder.embed_and_load(
             paragraphs_with_pages=paragraphs_with_pages, 
             num_pages=num_pages, 
             collection_name=st.session_state.sha256_code
         )
-
-    # Check if PDF has already been uploaded
+    
     if success:
-        # Retrieve chat history
         st.session_state.messages = chat_saving.get_messages(st.session_state.sha256_code)
         st.session_state.state = "chat"
+        st.success("✅ PDF uploaded and embedded successfully!")
         st.rerun()
-    
-    st.error("The PDF file has already been saved in the DB.")
+    else:
+        st.error("❗ This PDF has already been saved in the database.")
+
 
 def load_sidebar():
-    st.sidebar.title("Chat Menu")
-    st.sidebar.write("**Select one** to retrieve chat history...")
-    st.sidebar.write("or start a **new chat**.")
+    st.sidebar.title(":speech_balloon: Chat Menu")
+    st.sidebar.write("**Select a chat** to view history or start a new one.")
     
-    # Always refresh chat history before displaying buttons
     st.session_state.chat_history = chat_saving.get_chats()
-
-    # New chat button
-    if st.sidebar.button("**New Chat**", use_container_width=True, key="new_chat"):
+    if st.sidebar.button("➕ New Chat", key="new_chat"):
         st.session_state.state = "upload"
         st.rerun()
     
     st.sidebar.divider()
-    st.sidebar.subheader("Your Chats")
+    st.sidebar.subheader(":open_file_folder: Your Chats")
     
-    # Load chat history buttons
     for i, (pdf_name, sha256_code, model_name) in enumerate(st.session_state.chat_history):
-        if st.sidebar.button(f"{pdf_name} | **{model_name}**", use_container_width=True, key=f"chat_{i}"):
+        if st.sidebar.button(f"📄 {pdf_name} | 🧠 {model_name}", key=f"chat_{i}"):
             st.session_state.sha256_code = sha256_code
             st.session_state.messages = chat_saving.get_messages(sha256_code)
             st.session_state.pdf_name = pdf_name
             st.session_state.state = "chat"
             st.session_state.selected_model = model_name
             st.rerun()
-                
-    st.sidebar.divider()
     
-        # New chat button
-    if st.sidebar.button("**Manage Chats**", use_container_width=True, key="manage_chats"):
+    st.sidebar.divider()
+    if st.sidebar.button("🗑 Manage Chats", key="manage_chats"):
         st.session_state.state = "removal"
         st.session_state.file = None
         st.rerun()
@@ -89,102 +80,70 @@ if "file" not in st.session_state:
 if "chat_history" not in st.session_state:
     with st.spinner("Retrieving your chats..."):
         st.session_state.chat_history = chat_saving.get_chats()
-    if st.session_state.chat_history:
-        st.session_state.state = "upload"
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "all-MiniLM-L6-v2"  # Default model
+    st.session_state.selected_model = "all-MiniLM-L6-v2"
 
-st.title("PDF Search Engine")
+st.title("📖 PDF Search Engine")
 
-if st.session_state.state == "initial" or st.session_state.state == "upload":
-    
-    # remove any present file
+if st.session_state.state in ["initial", "upload"]:
     st.session_state.file = None
+    st.session_state.file = st.file_uploader("📂 Upload a PDF", type=["pdf"])
     
-    # File uploader
-    st.session_state.file = st.file_uploader("Upload a PDF", type=["pdf"])
-    
-    # Embedding model selection dropdown
     st.session_state.selected_model = st.selectbox(
-        "Choose an embedding model:",
+        "🔍 Choose an embedding model:",
         options=list(EMBEDDING_MODELS.keys()),
         format_func=lambda x: x,
         index=0,
     )
     st.session_state.selected_model = EMBEDDING_MODELS[st.session_state.selected_model]
 
-    # Button to start embedding
-    if st.session_state.file is not None:
-        if st.button("Start Embedding", key="start_embedding"):
-            upload_sequence()
-
-    # Load sidebar with chat history
+    if st.session_state.file and st.button("🚀 Start Embedding", key="start_embedding"):
+        upload_sequence()
+    
     load_sidebar()
 
 if st.session_state.state == "chat":
-    # Display active PDF chat
-    st.write(f"Chatting with **{st.session_state.pdf_name}**, embedded using **{st.session_state.selected_model}**")
-    
+    st.write(f"💬 Chatting with **{st.session_state.pdf_name}** (Model: **{st.session_state.selected_model}**)\n")
     load_sidebar()
     
-    # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    # Handle user input
     if user_input := st.chat_input("Ask a question..."):
         st.session_state.messages.append({"role": "user", "content": user_input})
-        
         with st.chat_message("user"):
             st.markdown(user_input)
         
-        # Search PDF content using embedding model
         query_result = st.session_state.embedder.search(user_input, collection_name=st.session_state.sha256_code)
-        response = f"You can find out more about your question at pages: \n{''.join(['- ' + str(page) + '\n' + 'Score: ' + str(score) + '\n' for page, score in query_result])}"
+        response = "\n".join([f"- 📄 Page: {page} | Score: {score}" for page, score in query_result])
         
-        # Store assistant response in session state
         st.session_state.messages.append({"role": "assistant", "content": response})
         chat_saving.save_message(st.session_state.sha256_code, st.session_state.pdf_name, st.session_state.selected_model, "user", user_input)
         chat_saving.save_message(st.session_state.sha256_code, st.session_state.pdf_name, st.session_state.selected_model, "assistant", response)
         
         with st.chat_message("assistant"):
             st.markdown(response)
-            
+
 if st.session_state.state == "removal":
-    
-    # selected chats to remove
     selected_chats = []
-    
-    # display chats with multiselect
     for chat_i, (pdf_name, sha256_code, model_name) in enumerate(st.session_state.chat_history):
-        if st.checkbox(f"{pdf_name} | {model_name}", key=f"remove_{chat_i}"):
+        if st.checkbox(f"🗂 {pdf_name} | {model_name}", key=f"remove_{chat_i}"):
             selected_chats.append(sha256_code)
     
-    # creating column for buttons layout
     col1, col2 = st.columns(2)
-    
-    
-    with col1:    
-        if st.button("Back", key="back", use_container_width=True):
+    with col1:
+        if st.button("⬅ Back", key="back"):
             st.session_state.state = "upload"
             st.rerun()
-    
     with col2:
-        if st.button("Remove Chats", key="remove_chats", use_container_width=True):
-            
-            # remove selected chats
-            if selected_chats != []:
-                for sha256_code in selected_chats:
-                    chat_saving.remove_chat(sha256_code)
-                    st.session_state.embedder.delete_collection(collection_name=sha256_code)
-                    
-                    # refresh chat history
-                    st.session_state.chat_history = chat_saving.get_chats()
-                    st.session_state.state = "upload"
-                    st.rerun()
-            else:
-                st.error("You need to select at least one chat to remove.")
-                
-            
-            
+        if st.button("🗑 Remove Chats", key="remove_chats") and selected_chats:
+            for sha256_code in selected_chats:
+                print("removing")
+                chat_saving.remove_chat(sha256_code)
+                st.session_state.embedder.delete_collection(collection_name=sha256_code)
+                st.session_state.chat_history = chat_saving.get_chats()
+                st.session_state.state = "upload"
+                st.rerun()
+        else:
+            st.error("❗ Select at least one chat to remove.")
