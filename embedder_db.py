@@ -125,3 +125,6 @@ class EmbedderDB:
             pages.append((point.payload["page"], point.score))
         
         return pages
+    
+    def delete_collection(self, collection_name="pdf_embeddings"):
+        self.client.delete_collection(collection_name)

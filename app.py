@@ -48,9 +48,9 @@ def upload_sequence():
     st.error("The PDF file has already been saved in the DB.")
 
 def load_sidebar():
-    st.sidebar.title("Embedded PDFs")
+    st.sidebar.title("Chat Menu")
     st.sidebar.write("**Select one** to retrieve chat history...")
-    st.sidebar.write("or start a **new conversation**.")
+    st.sidebar.write("or start a **new chat**.")
     
     # Always refresh chat history before displaying buttons
     st.session_state.chat_history = chat_saving.get_chats()
@@ -58,8 +58,10 @@ def load_sidebar():
     # New chat button
     if st.sidebar.button("**New Chat**", use_container_width=True, key="new_chat"):
         st.session_state.state = "upload"
-        st.session_state.file = None
         st.rerun()
+    
+    st.sidebar.divider()
+    st.sidebar.subheader("Your Chats")
     
     # Load chat history buttons
     for i, (pdf_name, sha256_code, model_name) in enumerate(st.session_state.chat_history):
@@ -70,6 +72,14 @@ def load_sidebar():
             st.session_state.state = "chat"
             st.session_state.selected_model = model_name
             st.rerun()
+                
+    st.sidebar.divider()
+    
+        # New chat button
+    if st.sidebar.button("**Manage Chats**", use_container_width=True, key="manage_chats"):
+        st.session_state.state = "removal"
+        st.session_state.file = None
+        st.rerun()
 
 # Initialize session state variables
 if "state" not in st.session_state:
@@ -87,6 +97,10 @@ if "selected_model" not in st.session_state:
 st.title("PDF Search Engine")
 
 if st.session_state.state == "initial" or st.session_state.state == "upload":
+    
+    # remove any present file
+    st.session_state.file = None
+    
     # File uploader
     st.session_state.file = st.file_uploader("Upload a PDF", type=["pdf"])
     
@@ -136,3 +150,41 @@ if st.session_state.state == "chat":
         
         with st.chat_message("assistant"):
             st.markdown(response)
+            
+if st.session_state.state == "removal":
+    
+    # selected chats to remove
+    selected_chats = []
+    
+    # display chats with multiselect
+    for chat_i, (pdf_name, sha256_code, model_name) in enumerate(st.session_state.chat_history):
+        if st.checkbox(f"{pdf_name} | {model_name}", key=f"remove_{chat_i}"):
+            selected_chats.append(sha256_code)
+    
+    # creating column for buttons layout
+    col1, col2 = st.columns(2)
+    
+    
+    with col1:    
+        if st.button("Back", key="back", use_container_width=True):
+            st.session_state.state = "upload"
+            st.rerun()
+    
+    with col2:
+        if st.button("Remove Chats", key="remove_chats", use_container_width=True):
+            
+            # remove selected chats
+            if selected_chats != []:
+                for sha256_code in selected_chats:
+                    chat_saving.remove_chat(sha256_code)
+                    st.session_state.embedder.delete_collection(collection_name=sha256_code)
+                    
+                    # refresh chat history
+                    st.session_state.chat_history = chat_saving.get_chats()
+                    st.session_state.state = "upload"
+                    st.rerun()
+            else:
+                st.error("You need to select at least one chat to remove.")
+                
+            
+            

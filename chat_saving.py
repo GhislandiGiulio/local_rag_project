@@ -25,3 +25,6 @@ def get_messages(pdf_hash):
 def get_chats():
     result = list({(chat["pdf_name"], chat["pdf_hash"], chat["model_name"]) for chat in chat_history.all()})
     return result
+
+def remove_chat(sha256_code):
+    chat_history.remove(Message.pdf_hash == sha256_code)
