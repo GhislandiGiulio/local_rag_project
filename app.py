@@ -3,6 +3,7 @@ from pdf_scraping import new_scrape_pdf
 from embedder_db import EmbedderDB
 import chat_saving
 import dotenv
+import asyncio
 
 # Load environment variables
 @st.cache_data
@@ -30,6 +31,13 @@ def upload_sequence():
 
     with st.spinner(f"Embedding using {st.session_state.selected_model}..."):
         st.session_state.embedder = EmbedderDB(embedding_model=st.session_state.selected_model)
+        
+        embed_tasks = [st.session_state.embedder.embed_and_load(
+            paragraphs_with_pages=paragraphs_with_pages, 
+            num_pages=num_pages, 
+            collection_name=st.session_state.sha256_code
+        ) for file in st.session_state.files] 
+        
         success = st.session_state.embedder.embed_and_load(
             paragraphs_with_pages=paragraphs_with_pages, 
             num_pages=num_pages, 
@@ -69,14 +77,14 @@ def load_sidebar():
     st.sidebar.divider()
     if st.sidebar.button("🗑 Manage Chats", key="manage_chats"):
         st.session_state.state = "removal"
-        st.session_state.file = None
+        st.session_state.files = []
         st.rerun()
 
 # Initialize session state variables
 if "state" not in st.session_state:
-    st.session_state.state = "initial"
-if "file" not in st.session_state:
-    st.session_state.file = None
+    st.session_state.state = "upload"
+if "files" not in st.session_state:
+    st.session_state.files = []
 if "chat_history" not in st.session_state:
     with st.spinner("Retrieving your chats..."):
         st.session_state.chat_history = chat_saving.get_chats()
@@ -85,9 +93,9 @@ if "selected_model" not in st.session_state:
 
 st.title("📖 PDF Search Engine")
 
-if st.session_state.state in ["initial", "upload"]:
-    st.session_state.file = None
-    st.session_state.file = st.file_uploader("📂 Upload a PDF", type=["pdf"])
+if st.session_state.state == "upload":
+    st.session_state.files = []
+    st.session_state.files = st.file_uploader("📂 Upload a PDF", type=["pdf"])
     
     st.session_state.selected_model = st.selectbox(
         "🔍 Choose an embedding model:",

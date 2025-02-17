@@ -4,6 +4,7 @@ from qdrant_client.models import VectorParams, Distance
 from qdrant_client.models import PointStruct
 from typing import Literal
 from openai import OpenAI
+import asyncio
 import os
 
 
@@ -30,10 +31,10 @@ class EmbedderDB:
 
         self.embedding_model_name = embedding_model
             
-    def embed_and_load(self, paragraphs_with_pages: list, num_pages: int, collection_name="pdf_embeddings"): 
+    async def embed_and_load(self, paragraphs_with_pages: list, num_pages: int, collection_name="pdf_embeddings"): 
         
         # this will create a new collection if it doesn't exist. if it exists it return error.
-        if not self.create_collection(collection_name): 
+        if not self.__create_collection(collection_name): 
             return False
         
         # embeding based on model
@@ -67,11 +68,11 @@ class EmbedderDB:
             for idx, (data, (text, num_pag)) in enumerate(zip(embeddings, paragraphs_with_pages))
         ]
         
-        self.upload(points, collection_name)
+        self.__upload(points, collection_name)
         
         return True
         
-    def create_collection(self, collection_name="pdf_embeddings"):
+    def __create_collection(self, collection_name="pdf_embeddings"):
         # Check if collection already exists
         existing_collections = {col.name for col in self.client.get_collections().collections}
 
@@ -92,7 +93,7 @@ class EmbedderDB:
             return False
                 
         
-    def upload(self, points: list, collection_name="pdf_embeddings"):
+    def __upload(self, points: list, collection_name="pdf_embeddings"):
         batch_size = 1000
         
         # uploading to DB in batches of size batch_size
